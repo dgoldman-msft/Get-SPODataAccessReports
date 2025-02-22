@@ -6,8 +6,11 @@
         .DESCRIPTION
             Export all SPODataAccessReports.
 
-        .PARAMETER DoNotDisconnectFromSPO
+        .PARAMETER DisconnectFromSPO
             Allow the user to specify whether to disconnect from the SPOService.
+
+        .PARAMETER ReportType
+            Specify the type of report to export. If not specified, all reports will be exported.
 
         .PARAMETER TenantDomain
             The domain of the tenant.
@@ -27,15 +30,23 @@
 
             Allows the user to specify whether to disconnect from the SPOService or retain the current connection.
 
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType EveryoneExceptExternalUsersAtSite
+
+            Selects a specific report type to export. (Default is all reports)
+
         .NOTES
             For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell
     #>
 
     param (
-        [CmdletBinding()]
-
+        [CmdletBinding(DefaultParameterSetName = 'Default')]
         [switch]
-        $DoNotDisconnectFromSPO,
+        $DisconnectFromSPO,
+
+        [ValidateSet('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
+        [string]
+        $ReportType,
 
         [Parameter(Mandatory = $true)]
         [string]
@@ -44,6 +55,14 @@
         [string]
         $TenantAdminUrl = "https://$TenantDomain-admin.sharepoint.com"
     )
+    
+    # Check if running as administrator
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Output "This script must be run as an administrator."
+        return
+    }
 
     try {
         # Check if the SharePoint Online Management Shell module is installed
@@ -58,8 +77,14 @@
 
         # Import the SharePoint Online Management Shell module
         if (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell)) {
-            Import-Module -Name Microsoft.Online.SharePoint.PowerShell
-            Write-Verbose "Imported Microsoft.Online.SharePoint.PowerShell module."
+            if ($PSVersionTable.PSEdition -eq "Core") {
+                Import-Module -Name Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction SilentlyContinue
+                Write-Verbose "Connecting with Windows PowerShell Core Version."
+            }
+            else {
+                Import-Module -Name Microsoft.Online.SharePoint.PowerShell
+                Write-Verbose "Connecting with Windows PowerShell Desktop Version."
+            }
         }
         else {
             Write-Verbose "Microsoft.Online.SharePoint.PowerShell module already imported."
@@ -67,38 +92,33 @@
     }
     catch {
         Write-Output "$_"
+        return
     }
 
     # Check connection to SharePoint Online
     try {
-        Get-SPOTenant
-        Write-Verbose "We are already connected to SharePoint Online."
-    }
-    catch {
-        Write-Output "Not connected to SharePoint Online."
-        try {
-            # Connect to SharePoint Online
-            Write-Verbose "Attempting to connect to SharePoint Online"
+        $connection = Get-SPOTenant -ErrorAction SilentlyContinue
+        if (-not $connection) {
+            Write-Output "Not connected to SharePoint Online. Attempting to connect to SharePoint Online"
             Connect-SPOService -Url $TenantAdminUrl -ErrorAction SilentlyContinue
             Write-Output "Connected to SharePoint Online."
         }
-        catch {
-            write-Output "$_"
-            return
+        else {
+            Write-Verbose "Connected to SharePoint Online."
         }
     }
-
+    catch {
+        write-Output "$_"
+        return
+    }
     # Enumerate through all the ReportEntity values
     try {
-        $reportEntities = @(
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::SharingLinks_Anyone,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::SharingLinks_PeopleInYourOrg,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::SharingLinks_Guests,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::SensitivityLabelForFiles,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::EveryoneExceptExternalUsersAtSite,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::EveryoneExceptExternalUsersForItems,
-            [Microsoft.Online.SharePoint.TenantAdministration.ReportEntityEnum]::PermissionedUsers
-        )
+        if($ReportType) {
+            $reportEntities = @($ReportType)
+        }
+        else {
+            $reportEntities = @('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')
+        }
 
         # Iterate through each ReportEntity
         foreach ($entity in $reportEntities) {
@@ -118,7 +138,7 @@
         Write-Output "$_"
     }
     finally {
-        if ($DoNotDisconnectFromSPO -eq $True) {
+        if ($DisconnectFromSPO -eq $True) {
             Write-Output "Disconnecting from the SPOService."
             Disconnect-SPOService
         }
