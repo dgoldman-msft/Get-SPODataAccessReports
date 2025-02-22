@@ -9,11 +9,19 @@
         .PARAMETER DisconnectFromSPO
             Allow the user to specify whether to disconnect from the SPOService.
 
+        .PARAMETER ReportEntity
+            Specifies the entity that could cause oversharing and hence tracked by these reports.
+
         .PARAMETER ReportType
-            Specify the type of report to export. If not specified, all reports will be exported.
+            Specifies the time period of data of the reports to be fetched.
+            A 'Snapshot' report will have the latest data as of the report generation time.
+            A 'RecentActivity' report will be based on data in the last 28 days.
 
         .PARAMETER TenantDomain
             The domain of the tenant.
+
+        .PARAMETER Workload
+            Specifies the workload for which the reports are to be fetched. SharePoint or OneDriveForBusiness. (Default is SharePoint)
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso
@@ -24,6 +32,11 @@
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -Verbose
 
             Command without verbose output
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite -ReportType Snapshot
+
+            Export a report entity of EveryoneExceptExternalUsersAtSite and report type of RecentActivity
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
@@ -46,16 +59,24 @@
 
         [ValidateSet('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
         [string]
-        $ReportType,
+        $ReportEntity,
+
+        [ValidateSet('Snapshot', 'RecentActivity')]
+        [string]
+        $ReportType = 'RecentActivity',
 
         [Parameter(Mandatory = $true)]
         [string]
         $TenantDomain,
 
         [string]
-        $TenantAdminUrl = "https://$TenantDomain-admin.sharepoint.com"
+        $TenantAdminUrl = "https://$TenantDomain-admin.sharepoint.com",
+
+        [ValidateSet('SharePoint', 'OneDriveForBusiness')]
+        [string]
+        $Workload = "SharePoint"
     )
-    
+
     # Check if running as administrator
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal($currentUser)
@@ -113,8 +134,8 @@
     }
     # Enumerate through all the ReportEntity values
     try {
-        if($ReportType) {
-            $reportEntities = @($ReportType)
+        if($ReportEntity) {
+            $reportEntities = $ReportEntity
         }
         else {
             $reportEntities = @('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')
@@ -123,14 +144,15 @@
         # Iterate through each ReportEntity
         foreach ($entity in $reportEntities) {
             # Get the report data
-            Write-Output "Getting report status for $($entity)"
-            $reports = Get-SPODataAccessGovernanceInsight -ReportEntity $entity
+            Write-Output "Getting report status for $($entity) with report type of: $($ReportType)."
+            Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a 'RecentActivity' report will be based on data in the last 28 days."
+            $reports = Get-SPODataAccessGovernanceInsight -ReportEntity $entity -ReportType $ReportType -WorkLoad $Workload
 
             # Check if there are any reports
             if ($reports.Status -eq "Completed") {
                 # Iterate through each report and export it
                 Write-Output "Exporting report: $($entity)"
-                Export-SPODataAccessGovernanceInsight -ReportID $reports.ReportId
+                Export-SPODataAccessGovernanceInsight -ReportEntity $entity
             }
         }
     }

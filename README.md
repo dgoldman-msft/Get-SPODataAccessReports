@@ -17,18 +17,29 @@ This script will connect to your tenant and download all SPO Data Access Reports
     Command without verbose output
 
 ## EXAMPLE 3
-    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DisconnectFromSPO
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite -ReportType Snapshot
+
+    Export a report entity of EveryoneExceptExternalUsersAtSite and report type of RecentActivity
+
+## EXAMPLE 4
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
 
     Allows the user to specify whether to disconnect from the SPOService or retain the current connection.
 
-## EXAMPLE 4
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType EveryoneExceptExternalUsersAtSite
+## EXAMPLE 5
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType EveryoneExceptExternalUsersAtSite
 
-            Selects a specific report type to export. (Default is all reports)
+    Selects a specific report type to export. (Default is all reports)
 
-## NOTES
-- This command by default will NOT disconnect the SPO session when the script finishes. If you want to terminate your connect please see Example 3.
+## GENERAL NOTES
+- This command by default will NOT disconnect the SPO session when the script finishes. If you want to terminate your connect please see Example 4.
 
 - For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell
 
 - This module needs to be ran as an Administrator in Powershell to export the reports.
+
+## USAGE NOTES
+-  ReportType specifies the time period of data of the reports to be fetched. (Default is 'RecentActivity')
+- 'Snapshot' report will have the latest data as of the report generation time.
+- 'RecentActivity' report will be based on data in the last 28 days.
+- 'Workload' default is 'SharePoint'.
