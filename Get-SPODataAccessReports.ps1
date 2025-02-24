@@ -52,8 +52,8 @@
             For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell
     #>
 
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
     param (
-        [CmdletBinding(DefaultParameterSetName = 'Default')]
         [switch]
         $DisconnectFromSPO,
 
@@ -132,9 +132,10 @@
         write-Output "$_"
         return
     }
+
     # Enumerate through all the ReportEntity values
     try {
-        if($ReportEntity) {
+        if ($ReportEntity) {
             $reportEntities = $ReportEntity
         }
         else {
@@ -145,7 +146,7 @@
         foreach ($entity in $reportEntities) {
             # Get the report data
             Write-Output "Getting report status for $($entity) with report type of: $($ReportType)."
-            Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a 'RecentActivity' report will be based on data in the last 28 days."
+            Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a'RecentActivity' report will be based on data in the last 28 days."
             $reports = Get-SPODataAccessGovernanceInsight -ReportEntity $entity -ReportType $ReportType -WorkLoad $Workload
 
             # Check if there are any reports
