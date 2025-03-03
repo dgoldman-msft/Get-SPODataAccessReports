@@ -11,17 +11,16 @@
 
         .PARAMETER ReportEntity
             Specifies the entity that could cause oversharing and hence tracked by these reports.
-
-        .PARAMETER ReportType
-            Specifies the time period of data of the reports to be fetched.
-            A 'Snapshot' report will have the latest data as of the report generation time.
-            A 'RecentActivity' report will be based on data in the last 28 days.
+            - EveryoneExceptExternalUsersAtSite
+            - EveryoneExceptExternalUsersForItems
+            - SharingLinks_Anyone
+            - SharingLinks_PeopleInYourOrg
+            - SharingLinks_Guests
+            - SensitivityLabelForFiles
+            - PermissionedUsers
 
         .PARAMETER TenantDomain
             The domain of the tenant.
-
-        .PARAMETER Workload
-            Specifies the workload for which the reports are to be fetched. SharePoint or OneDriveForBusiness. (Default is SharePoint)
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso
@@ -54,27 +53,23 @@
 
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     param (
+        [Parameter(ParameterSetName = 'Default', HelpMessage = 'Disconnect from SharePoint Online after the report collection is completed. Default is $false.')]
         [switch]
         $DisconnectFromSPO,
 
-        [ValidateSet('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
+        [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the entity that could cause oversharing and hence tracked by these reports. Valid values are: EveryoneExceptExternalUsersAtSite, EveryoneExceptExternalUsersForItems, SharingLinks_Anyone, SharingLinks_PeopleInYourOrg, SharingLinks_Guests, SensitivityLabelForFiles, PermissionedUsers.')]
+        [ValidateSet('All', 'EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
         [string]
         $ReportEntity,
 
-        [ValidateSet('Snapshot', 'RecentActivity')]
-        [string]
-        $ReportType = 'RecentActivity',
-
+        [Parameter(Mandatory = $true, ParameterSetName = 'Default', HelpMessage = 'Specifies the domain of the tenant. This parameter is mandatory.')]
         [Parameter(Mandatory = $true)]
         [string]
         $TenantDomain,
 
+        [Parameter(ParameterSetName = 'Default')]
         [string]
-        $TenantAdminUrl = "https://$TenantDomain-admin.sharepoint.com",
-
-        [ValidateSet('SharePoint', 'OneDriveForBusiness')]
-        [string]
-        $Workload = "SharePoint"
+        $TenantAdminUrl = "https://$TenantDomain-admin.sharepoint.com"
     )
 
     # Check if running as administrator
@@ -135,25 +130,66 @@
 
     # Enumerate through all the ReportEntity values
     try {
-        if ($ReportEntity) {
-            $reportEntities = $ReportEntity
+        if ($ReportEntity -eq 'All') {
+            $reportEntities = @('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')
         }
         else {
-            $reportEntities = @('EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')
+            $reportEntities = @($ReportEntity)
         }
 
         # Iterate through each ReportEntity
         foreach ($entity in $reportEntities) {
             # Get the report data
-            Write-Output "Getting report status for $($entity) with report type of: $($ReportType)."
-            Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a'RecentActivity' report will be based on data in the last 28 days."
-            $reports = Get-SPODataAccessGovernanceInsight -ReportEntity $entity -ReportType $ReportType -WorkLoad $Workload
+            Write-Output "Getting report status for $($entity)."
+            $reports = Get-SPODataAccessGovernanceInsight -ReportEntity $entity
+            $reportArray = @()
+            foreach ($report in $reports) {
+                $reportArray += [PSCustomObject]@{
+                    RunspaceId        = $report.RunspaceId
+                    ReportId          = $report.ReportId
+                    ReportName        = $report.ReportName
+                    ReportEntity      = $report.ReportEntity
+                    Status            = $report.Status
+                    Workload          = $report.Workload
+                    TriggeredDateTime = $report.TriggeredDateTime
+                    CreatedDateTime   = $report.CreatedDateTime
+                    ReportStartTime   = $report.ReportStartTime
+                    ReportEndTime     = $report.ReportEndTime
+                    ReportType        = $report.ReportType
+                    SitesFound        = $report.SitesFound
+                    Privacy           = $report.Privacy
+                    Sensitivity       = $report.Sensitivity
+                    Templates         = $report.Templates
+                }
+            }
 
-            # Check if there are any reports
-            if ($reports.Status -eq "Completed") {
-                # Iterate through each report and export it
-                Write-Output "Exporting report: $($entity)"
-                Export-SPODataAccessGovernanceInsight -ReportEntity $entity
+            foreach ($report in $reportArray) {
+                if ($report.Status -eq "Snapshot") {
+                    Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a 'RecentActivity' report will be based on data in the last 28 days."
+                }
+
+                switch ($report.Status) {
+                    "NotStarted" {
+                        Write-Output "Report generation for $($entity) has not yet begun."
+                    }
+                    "InQueue" {
+                        Write-Output "Report for $($entity) is in the queue and waiting to be processed."
+                    }
+                    "InProgress" {
+                        Write-Output "Report generation for $($entity) is currently in progress."
+                    }
+                    "Completed" {
+                        Write-Output "Exporting completed report: $($entity)"
+                        $report
+                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
+                    }
+                    "Failed" {
+                        Write-Output "Report generation for $($entity) has failed."
+                    }
+                    default {
+                        Write-Output "Unknown report status: $($report.Status)"
+                    }
+                }
             }
         }
     }
