@@ -91,19 +91,9 @@ function Get-SPODataAccessReports {
             The domain of the tenant.
 
         .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite
 
-            Command without verbose output
-
-        .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -Verbose
-
-            Command without verbose output
-
-        .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite -ReportType Snapshot
-
-            Export a report entity of EveryoneExceptExternalUsersAtSite and report type of RecentActivity
+            Export a report entity of EveryoneExceptExternalUsersAtSite
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
@@ -111,9 +101,14 @@ function Get-SPODataAccessReports {
             Allows the user to specify whether to disconnect from the SPOService or retain the current connection.
 
         .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType EveryoneExceptExternalUsersAtSite
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
 
-            Selects a specific report type to export. (Default is all reports)
+            Get all reports. (Default is all reports)
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType All -ExportReports
+
+            Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
 
         .NOTES
             For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell
