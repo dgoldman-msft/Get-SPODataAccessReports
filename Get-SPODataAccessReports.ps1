@@ -9,6 +9,9 @@
         .PARAMETER DisconnectFromSPO
             Allow the user to specify whether to disconnect from the SPOService.
 
+        .PARAMETER LoggingDirectory
+            Directory to save the log file to. Default is "MyDocuments\Logging".
+
         .PARAMETER ReportEntity
             Specifies the entity that could cause oversharing and hence tracked by these reports.
             - EveryoneExceptExternalUsersAtSite
@@ -51,11 +54,17 @@
             For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell
     #>
 
+    [OutputType([System.Object])]
+    [OutputType([System.String])]
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     param (
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Disconnect from SharePoint Online after the report collection is completed. Default is $false.')]
         [switch]
         $DisconnectFromSPO,
+
+        [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the directory to save the log file to. Default is $env:MyDocuments\SamReporting.')]
+        [string]
+        $LoggingDirectory = (Join-Path -Path ([Environment]::GetFolderPath("MyDocuments")) -ChildPath "SamReporting"),
 
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the entity that could cause oversharing and hence tracked by these reports. Valid values are: EveryoneExceptExternalUsersAtSite, EveryoneExceptExternalUsersForItems, SharingLinks_Anyone, SharingLinks_PeopleInYourOrg, SharingLinks_Guests, SensitivityLabelForFiles, PermissionedUsers.')]
         [ValidateSet('All', 'EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
@@ -77,6 +86,17 @@
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal($currentUser)
     if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Output "This script must be run as an administrator."
+        return
+    }
+
+    try {
+        if (-NOT(Test-Path -Path $LoggingDirectory)) {
+            Write-Verbose "Creating New Logging Directory"
+            New-Item -Path $LoggingDirectory -ItemType Directory -ErrorAction Stop | Out-Null
+        }
+    }
+    catch {
+        Write-Output "$_"
         return
     }
 
@@ -182,6 +202,15 @@
                         Write-Output "Exporting completed report: $($entity)"
                         $report
                         Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
+
+                        # Temp fix until the Sharepoint Online Management Shell module is updated to reflect the DownloadPath parameter
+                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
+                        $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
+                        $fileName = [System.IO.Path]::GetFileName($exportPath)
+                        $newFileName = "$($entity)_$($report.ReportId).csv"
+                        Rename-Item -Path $fileName -NewName $newFileName
+                        Move-Item -Path $newFileName -Destination $LoggingDirectory
+                        Write-Output "Report saved as $($newFileName) to $($LoggingDirectory)"
                     }
                     "Failed" {
                         Write-Output "Report generation for $($entity) has failed."
