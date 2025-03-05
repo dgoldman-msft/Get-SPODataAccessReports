@@ -87,13 +87,26 @@ function Get-SPODataAccessReports {
             - SensitivityLabelForFiles
             - PermissionedUsers
 
+        .PARAMETER TableView
+            Specifies the output report type. Valid outputs are: Filtered or Full.
+
         .PARAMETER TenantDomain
             The domain of the tenant.
 
         .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
 
-            Export a report entity of EveryoneExceptExternalUsersAtSite
+            Get all reports
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -TableView
+
+            Get all reports (Default is all reports), when finished show all reports found in a table view
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports
+
+            Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
@@ -104,11 +117,6 @@ function Get-SPODataAccessReports {
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
 
             Get all reports. (Default is all reports)
-
-        .EXAMPLE
-            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType All -ExportReports
-
-            Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
 
         .NOTES
             For more information please see: https://learn.microsoft.com/en-us/sharepoint/powershell-for-data-access-governance#creating-reports-using-powershell

@@ -7,24 +7,29 @@ Export all SPO Data Access Reports
 This script will connect to your tenant and download all SPO Data Access Reports. Module can use PowerShell 5 and 7 to connect.
 
 ## EXAMPLE 1
-    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity EveryoneExceptExternalUsersAtSite
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
 
-    Export a report entity of EveryoneExceptExternalUsersAtSite
+    Get all reports
 
 ## EXAMPLE 2
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -TableView
+
+    Get all reports (Default is all reports), when finished show all reports found in a table view
+
+## EXAMPLE 3
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports
+
+    Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
+
+## EXAMPLE 4
     C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
 
     Allows the user to specify whether to disconnect from the SPOService or retain the current connection.
 
-## EXAMPLE 3
+## EXAMPLE 5
     C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
 
     Get all reports. (Default is all reports)
-
-## EXAMPLE 4
-     C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportType All -ExportReports
-
-    Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
 
 ## GENERAL NOTES
 - This command by default will NOT disconnect the SPO session when the script finishes. If you want to terminate your connect please see Example 4.
