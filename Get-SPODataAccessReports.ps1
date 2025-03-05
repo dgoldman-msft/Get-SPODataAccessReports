@@ -139,8 +139,11 @@ function Get-SPODataAccessReports {
         [string]
         $ReportEntity = 'All',
 
+        [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the output report type. Valid outputs are: Filtered or Full.')]
+        [switch]
+        $TableView,
+
         [Parameter(Mandatory = $true, ParameterSetName = 'Default', HelpMessage = 'Specifies the domain of the tenant. This parameter is mandatory.')]
-        [Parameter(Mandatory = $true)]
         [string]
         $TenantDomain,
 
@@ -263,8 +266,8 @@ function Get-SPODataAccessReports {
         }
 
         foreach ($report in $reportArray) {
-            Write-Output "`r`nObtaining report for $($report.ReportEntity) - $($report.ReportId)"
-            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Getting report status for $($report.ReportEntity) - $($report.ReportId)."
+            #Write-Output "`r`nObtaining report for $($report.ReportEntity) - $($report.ReportId)"
+            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Getting report status for $($report.ReportEntity) - $($report.ReportId)"
 
             if ($report.Status -eq "Snapshot") {
                 Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a 'RecentActivity' report will be based on data in the last 28 days."
@@ -288,24 +291,21 @@ function Get-SPODataAccessReports {
                     $inProgress++
                 }
                 "Completed" {
-                    if ($Verbose) { $report }
                     # Temp fix until the Sharepoint Online Management Shell module is updated to reflect the DownloadPath parameter
 
                     if ($ExportReports) {
-                         Write-Output "Exporting $($report.ReportEntity) - $($report.ReportId) completed!"
-
+                        Write-Output "Exporting $($report.ReportEntity) - $($report.ReportId) completed!"
                         Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
-
-                        $randomNumber = Get-Random -Minimum 1000 -Maximum 9999
+                        $dateString = (Get-Date).ToString("MMddyyyy_HHmmss")
                         $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
                         $fileName = [System.IO.Path]::GetFileName($exportPath)
-                        $newFileName = "$($entity)_$($report.ReportId)_$randomNumber.csv"
+                        $newFileName = "$($report.ReportEntity)_$($report.ReportId)_$dateString.csv"
                         Rename-Item -Path $fileName -NewName $newFileName
                         Move-Item -Path $newFileName -Destination $LoggingDirectory
                         Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
                     }
                     else {
-                        Get-SPODataAccessGovernanceInsight -ReportID $report.ReportId
+                        #Get-SPODataAccessGovernanceInsight -ReportID $report.ReportId
                     }
 
                     $completed++
@@ -322,6 +322,10 @@ function Get-SPODataAccessReports {
                 }
             }
         }
+
+
+        if ($TableView) { $reportArray | Format-Table ReportId, ReportEntity, Status, Workload, ReportType, ReportType, SitesFound }
+        else { foreach ($report in $reportArray) { $report } }
     }
     catch {
         Write-Output "$_"
