@@ -221,11 +221,18 @@ function Get-SPODataAccessReports {
     try {
         $connection = Get-SPOTenant -ErrorAction SilentlyContinue
         if (-not $connection) {
+            try {
             Write-Output "Not connected to SharePoint Online. Attempting to connect to SharePoint Online"
             Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Not connected to SharePoint Online. Attempting to connect to SharePoint Online"
-            Connect-SPOService -Url $TenantAdminUrl -ErrorAction SilentlyContinue
+            Connect-SPOService -Url $TenantAdminUrl -ErrorAction Stop
             Write-Output "Connected to SharePoint Online."
             Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Connected to SharePoint Online."
+            }
+            catch{
+                Write-Output "$_"
+                Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "ERROR: $_"
+                return
+            }
         }
         else {
             Write-Verbose "Already to SharePoint Online."
