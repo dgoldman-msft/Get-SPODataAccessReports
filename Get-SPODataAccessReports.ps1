@@ -281,8 +281,7 @@ function Get-SPODataAccessReports {
         }
 
         foreach ($report in $reportArray) {
-            #Write-Output "`r`nObtaining report for $($report.ReportEntity) - $($report.ReportId)"
-            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Getting report status for $($report.ReportEntity) - $($report.ReportId)"
+            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Getting report status for $($report.ReportEntity) - $($report.ReportId) - $($report.Status)"
 
             if ($report.Status -eq "Snapshot") {
                 Write-Output "NOTE: A 'Snapshot' report will have the latest data as of the report generation time and a 'RecentActivity' report will be based on data in the last 28 days."
