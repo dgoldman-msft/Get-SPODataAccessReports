@@ -99,6 +99,11 @@ function Get-SPODataAccessReports {
             Get all reports
 
         .EXAMPLE
+            C:\PS> Gsdar -TenantDomain Contoso -ReportEntity All
+
+            Get all reports using alias. This will also work for all commands in this module.
+
+        .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -TableView
 
             Get all reports (Default is all reports), when finished show all reports found in a table view
@@ -107,6 +112,17 @@ function Get-SPODataAccessReports {
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports
 
             Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports -SecondsToWait 120
+
+            This sets a sleep timer so reports can be exported fully before renamed and moved to "MyDocuments\Logging". Default is 120 seconds. Maximum is 300 seconds.
+
+        .EXAMPLE
+            C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports -SecondsToWait 120
+
+            Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
+
 
         .EXAMPLE
             C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
@@ -125,7 +141,8 @@ function Get-SPODataAccessReports {
     [OutputType([System.Object])]
     [OutputType([System.String])]
     [CmdletBinding(DefaultParameterSetName = 'Default')]
-    param (
+    [Alias('gsdar')]
+        param (
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Disconnect from SharePoint Online after the report collection is completed. Default is $false.')]
         [switch]
         $DisconnectFromSPO,
@@ -146,6 +163,11 @@ function Get-SPODataAccessReports {
         [ValidateSet('All', 'EveryoneExceptExternalUsersAtSite', 'EveryoneExceptExternalUsersForItems', 'SharingLinks_Anyone', 'SharingLinks_PeopleInYourOrg', 'SharingLinks_Guests', 'SensitivityLabelForFiles', 'PermissionedUsers')]
         [string]
         $ReportEntity = 'All',
+
+        [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the number of seconds to wait for report export.')]
+        [ValidateRange(1, 300)]
+        [Int32]
+        $SecondsToWait = 120,
 
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the output report type. Valid outputs are: Filtered or Full.')]
         [switch]
@@ -314,9 +336,12 @@ function Get-SPODataAccessReports {
                         $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
                         $fileName = [System.IO.Path]::GetFileName($exportPath)
                         $newFileName = "$($report.ReportEntity)_$($report.ReportId)_$dateString.csv"
+                        Write-Output "Sleeping for $($SecondsToWait) while we give the report time to be exported."
+                        Start-Sleep -Seconds $SecondsToWait
                         Rename-Item -Path $fileName -NewName $newFileName
                         Move-Item -Path $newFileName -Destination $LoggingDirectory
                         Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
+
                     }
                     else {
                         #Get-SPODataAccessGovernanceInsight -ReportID $report.ReportId

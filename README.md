@@ -12,24 +12,29 @@ This script will connect to your tenant and download all SPO Data Access Reports
     Get all reports
 
 ## EXAMPLE 2
-    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -TableView
+    C:\PS> Gsdar -TenantDomain Contoso -ReportEntity All
 
-    Get all reports (Default is all reports), when finished show all reports found in a table view
+    Get all reports using an alias. This will also work for all commands in this module.
 
 ## EXAMPLE 3
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -TableView
+
+    Get all reports (Default is all reports), when finished show all reports found in a table view.
+
+## EXAMPLE 4
     C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports
 
     Export all reports to the specified directory. Default is "MyDocuments\Logging". If this parameter is not specified, the reports will not be exported.
 
-## EXAMPLE 4
+## EXAMPLE 5
+    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All -ExportReports -SecondsToWait 120
+
+    This sets a sleep timer so reports can be exported fully before renamed and moved to "MyDocuments\Logging". Default is 120 seconds. Maximum is 300 seconds.
+
+## EXAMPLE 6
     C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -DoNotDisconnectFromSPO
 
     Allows the user to specify whether to disconnect from the SPOService or retain the current connection.
-
-## EXAMPLE 5
-    C:\PS> Get-SPODataAccessReports -TenantDomain Contoso -ReportEntity All
-
-    Get all reports. (Default is all reports)
 
 ## GENERAL NOTES
 - This command by default will NOT disconnect the SPO session when the script finishes. If you want to terminate your connect please see Example 4.
