@@ -167,7 +167,7 @@ function Get-SPODataAccessReports {
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the number of seconds to wait for report export.')]
         [ValidateRange(1, 300)]
         [Int32]
-        $SecondsToWait = 120,
+        $SecondsToWait = 5,
 
         [Parameter(ParameterSetName = 'Default', HelpMessage = 'Specifies the output report type. Valid outputs are: Filtered or Full.')]
         [switch]
@@ -313,16 +313,21 @@ function Get-SPODataAccessReports {
                     # Temp fix until the Sharepoint Online Management Shell module is updated to reflect the DownloadPath parameter
 
                     if ($ExportReports) {
+                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId -
                         Write-Output "Exporting $($report.ReportEntity) - $($report.ReportId) completed!"
-                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
                         $dateString = (Get-Date).ToString("MMddyyyy_HHmmss")
-                        $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
-                        $fileName = [System.IO.Path]::GetFileName($exportPath)
-                        $newFileName = "$($report.ReportEntity)_$($report.ReportId)_$dateString.csv"
-                        Write-Output "Sleeping for $($SecondsToWait) while we give the report time to be exported."
                         Start-Sleep -Seconds $SecondsToWait
-                        Rename-Item -Path $fileName -NewName $newFileName
-                        Move-Item -Path $newFileName -Destination $LoggingDirectory
+                        $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
+                        if ($null -ne $exportPath) {
+                            $newFileName = "$($report.ReportEntity)_$($report.ReportId)_$dateString.csv"
+                            Rename-Item -Path $exportPath -NewName $newFileName
+                            Move-Item -Path (Join-Path -Path (Get-Location) -ChildPath $newFileName) -Destination $LoggingDirectory
+                            Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
+                        }
+                        else {
+                            Write-Output "Exported file for ReportId $($report.ReportId) not found."
+                            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Exported file for ReportId $($report.ReportId) not found."
+                        }
                         Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
 
                     }
