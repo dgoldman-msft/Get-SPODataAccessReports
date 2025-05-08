@@ -313,23 +313,22 @@ function Get-SPODataAccessReports {
                     # Temp fix until the Sharepoint Online Management Shell module is updated to reflect the DownloadPath parameter
 
                     if ($ExportReports) {
-                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId -
-                        Write-Output "Exporting $($report.ReportEntity) - $($report.ReportId) completed!"
+                        Export-SPODataAccessGovernanceInsight -ReportID $report.ReportId
+                        Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Exporting $($report.ReportEntity) - $($report.ReportId) completed!"
                         $dateString = (Get-Date).ToString("MMddyyyy_HHmmss")
                         Start-Sleep -Seconds $SecondsToWait
                         $exportPath = Get-ChildItem -Path . -Filter "*$($report.ReportId)*.csv" | Select-Object -First 1 -ExpandProperty FullName
                         if ($null -ne $exportPath) {
                             $newFileName = "$($report.ReportEntity)_$($report.ReportId)_$dateString.csv"
                             Rename-Item -Path $exportPath -NewName $newFileName
+                            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Exported file for ReportId $($report.ReportId) renamed to $($newFileName)"
                             Move-Item -Path (Join-Path -Path (Get-Location) -ChildPath $newFileName) -Destination $LoggingDirectory
-                            Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
+                            Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Report $($newFileName) moved to $($LoggingDirectory)"
                         }
                         else {
-                            Write-Output "Exported file for ReportId $($report.ReportId) not found."
                             Write-ToLog -LoggingDirectory $LoggingDirectory -LoggingFilename $LoggingFilename -InputString "Exported file for ReportId $($report.ReportId) not found."
                         }
                         Write-Output "Report renamed to $($newFileName) and moved to $($LoggingDirectory)"
-
                     }
                     else {
                         #Get-SPODataAccessGovernanceInsight -ReportID $report.ReportId
